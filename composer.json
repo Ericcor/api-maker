@@ -1,0 +1,32 @@
+{
+    "name": "ericcor/api-maker",
+    "description": "Laravel simple api crud maker",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Eric Cordova",
+            "email": "ericcordova25@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "autoload": {
+        "psr-4": {
+            "ApiMaker\\": "src/"
+        }
+    },
+    "require": {
+        "php": ">=7.3"
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "v1.8"
+        }
+    },
+    "config": {
+        "preferred-install": "dist",
+        "sort-packages": true,
+        "optimize-autoloader": true,
+        "process-timeout": 0
+    }
+}
