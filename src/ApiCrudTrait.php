@@ -3,58 +3,104 @@
 namespace ApiMaker;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 trait ApiCrudTrait
 {
     public function index(Request $request)
     {
-        return response()->json(
-            $this->list(
-                $this->class,
-                $request
-            )
-        );
+        return response()->json([
+            'status' => 'success',
+            'data' => $this->list($this->class, $request)
+        ]);
     }
 
     public function store(Request $request)
     {
-        $resource = $this->new(
-            $this->class,
-            $request
-        );
+        try {
+            $resource = DB::transaction(function () use ($request) {
+                return $this->new($this->class, $request);
+            });
 
-        return response($resource, 201);
+            return response()->json([
+                'status' => 'success',
+                'data' => $resource
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al crear el recurso',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function show($id)
     {
-        return response()->json(
-            $this->find(
-                $this->class,
-                $id
-            )
-        );
+        try {
+            $resource = $this->find($this->class, $id);
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $resource
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Recurso no encontrado'
+            ], 404);
+        }
     }
 
     public function update($id, Request $request)
     {
-        $resource = $this->edit(
-            $this->class::findOrFail($id),
-            $request
-        );
+        try {
+            $resource = DB::transaction(function () use ($id, $request) {
+                $model = $this->class::findOrFail($id);
+                return $this->edit($model, $request);
+            });
 
-        return response($resource);
+            return response()->json([
+                'status' => 'success',
+                'data' => $resource
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Recurso no encontrado'
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al actualizar el recurso',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function destroy($id)
     {
-        $resource = $this->class::findOrFail($id);
+        try {
+            DB::transaction(function () use ($id) {
+                $resource = $this->class::findOrFail($id);
+                $resource->delete();
+            });
 
-        $resource->delete();
-
-        return response([
-            'status' => 'deleted',
-            'message' => 'The resource was successfully deleted',
-        ]);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Recurso eliminado correctamente'
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Recurso no encontrado'
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al eliminar el recurso',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }
