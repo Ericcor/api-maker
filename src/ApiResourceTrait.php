@@ -83,7 +83,7 @@ trait ApiResourceTrait
             foreach (explode(',', $request->input('order_by')) as $order) {
                 $orderData = $this->getOrderBy($order);
                 if ($orderData && $this->validateOrderBy($orderData, $model, $listable)) {
-                    $query->orderBy($orderData->column, $orderData->order);
+                    $query = $this->applyOrderBy($query, $orderData);
                 }
             }
         }
@@ -108,6 +108,25 @@ trait ApiResourceTrait
         return $query->paginate($perPage);
     }
 
+    private function getNameAndColumn($key, $alias, $table)
+    {
+        $column = !is_numeric($key) ? $key : $alias;
+
+        if ($alias == $column) {
+            return [
+                // Name
+                $alias,
+                // Column
+                "{$table}.{$column}",
+            ];
+        }
+
+        return [
+            $alias,
+            DB::raw($column),
+        ];
+    }
+
     protected function getOrderBy($orderBy)
     {
         $array = explode(':', $orderBy);
@@ -127,5 +146,29 @@ trait ApiResourceTrait
         return collect(explode(',', $request->get('with', '')))->filter(
             fn($relation) => method_exists($model, $relation)
         )->toArray();
+    }
+
+    private function applyOrderBy($query, $order_by)
+    {
+        if (count($columnaArray = explode('.', $order_by->column)) == 2) {
+            $model = $query->getModel();
+            $relation = $model->{$columnaArray[0]}();
+
+            if ($relation instanceof \Illuminate\Database\Eloquent\Relations\HasOne) {
+	            return $query->join(
+	                $table = $relation->getRelated()->getTable(),
+	                $relation->getQualifiedForeignKeyName(),
+	                $relation->getQualifiedParentKeyName()
+	            )->orderBy("{$table}.{$columnaArray[1]}", $order_by->order);
+            }
+
+            return $query->join(
+                $table = $relation->getRelated()->getTable(),
+                $relation->getQualifiedForeignKeyName(),
+                $relation->getQualifiedOwnerKeyName()
+            )->orderBy("{$table}.{$columnaArray[1]}", $order_by->order);
+        }
+
+        return $query->orderBy($order_by->column, $order_by->order);
     }
 }
