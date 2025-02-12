@@ -3,12 +3,15 @@
 namespace ApiMaker;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 trait ListableTrait
 {
     /**
      * Returns the listable attributes.
+     *
+     * @return array
      */
     public function getListable(): array
     {
@@ -17,45 +20,60 @@ trait ListableTrait
 
     /**
      * Sets the listable attributes.
+     *
+     * @param array $listable
+     *
+     * @return static
      */
     public function setListable(array $listable): self
     {
         $this->listable = $listable;
+
         return $this;
     }
 
     /**
-     * Adds a new item to the listable attributes.
+     * Adds new item to the listable attributes.
+     *
+     * @param mixed      $value
+     * @param mixed|null $alias
+     *
+     * @return static
      */
-    public function addListable(string $value, ?string $alias = null): self
+    public function addListable($value, $alias = null): self
     {
-        if (!isset($this->listable)) {
-            $this->listable = [];
+        if (is_null($alias)) {
+            $this->listable[] = $value;
         }
 
-        if ($alias === null) {
-            $this->listable[] = $value;
-        } else {
-            $this->listable[$value] = $alias;
-        }
+        $this->listable[$value] = $alias;
 
         return $this;
     }
 
     /**
      * Returns the selectable attributes.
+     *
+     * @return array
      */
-    public function getSelectable(): array|string
+    public function getSelectable()
     {
-        if (empty($this->listable)) {
+        if (!isset($this->listable) || empty($this->listable)) {
             return '*';
         }
 
-        return array_map(function ($key, $value) {
+        foreach ($this->listable as $key => $value) {
             if (is_numeric($key)) {
-                return strpos($value, '.') === false ? "{$this->getTable()}.{$value}" : $value;
+                if (count(explode('.', $value)) == 1) {
+                    $return[] = "{$this->getTable()}.{$value}";
+                } else {
+                    $return[] = $value;
+                }
+            } else {
+                $return[] = DB::raw("{$key} as {$value}");
             }
-            return DB::raw("{$key} as {$value}");
-        }, array_keys($this->listable), $this->listable);
+        }
+
+        return $return;
     }
 }
