@@ -9,10 +9,12 @@ trait ApiCrudTrait
 {
     public function index(Request $request)
     {
-        return response()->json([
-            'status' => 'success',
-            'data' => $this->list($this->class, $request)
-        ]);
+        return response()->json(
+            $this->list(
+                $this->class,
+                $request
+            )
+        );
     }
 
     public function store(Request $request)
@@ -21,11 +23,7 @@ trait ApiCrudTrait
             $resource = DB::transaction(function () use ($request) {
                 return $this->new($this->class, $request);
             });
-
-            return response()->json([
-                'status' => 'success',
-                'data' => $resource
-            ], 201);
+            return response($resource, 201);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
@@ -40,10 +38,8 @@ trait ApiCrudTrait
         try {
             $resource = $this->find($this->class, $id);
 
-            return response()->json([
-                'status' => 'success',
-                'data' => $resource
-            ]);
+            return response()->json($resource);
+
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'status' => 'error',
@@ -60,10 +56,7 @@ trait ApiCrudTrait
                 return $this->edit($model, $request);
             });
 
-            return response()->json([
-                'status' => 'success',
-                'data' => $resource
-            ]);
+            return response($resource);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'status' => 'error',
