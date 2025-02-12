@@ -171,4 +171,48 @@ trait ApiResourceTrait
 
         return $query->orderBy($order_by->column, $order_by->order);
     }
+
+    protected function find(string $class, $id, $pk = null)
+    {
+        $model = (new $class);
+
+        if (!is_null($pk)) {
+            $model->setKeyName($pk);
+        }
+
+        return $model->select($model->getSelectable())
+            ->with($this->getEagerLoadedRelations(request(), $class))
+            ->findOrFail($id)
+            ->append($this->getAppendableAttributes(request()))
+        ;
+    }
+
+    protected function new(string $class, Request $request)
+    {
+        $resource = new $class;
+
+        $input = $request->only($resource->getFillable());
+
+        $resource->fill($this->alterInput($input));
+
+        $resource->save();
+
+        return $resource->refresh();
+    }
+
+    protected function alterInput(array $input): array
+    {
+        return $input;
+    }
+
+    protected function edit(Model $resource, Request $request)
+    {
+        $input = $request->only($resource->getFillable());
+
+        $resource->fill($this->alterInput($input));
+
+        $resource->save();
+
+        return $resource->fresh();
+    }
 }
