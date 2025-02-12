@@ -45,17 +45,24 @@ trait ListableTrait
     /**
      * Returns the selectable attributes.
      */
-    public function getSelectable(): array|string
+    public function getSelectable()
     {
-        if (empty($this->listable)) {
+        if (!isset($this->listable) || empty($this->listable)) {
             return '*';
         }
 
-        return array_map(function ($key, $value) {
+        foreach ($this->listable as $key => $value) {
             if (is_numeric($key)) {
-                return strpos($value, '.') === false ? "{$this->getTable()}.{$value}" : $value;
+                if (count(explode('.', $value)) == 1) {
+                    $return[] = "{$this->getTable()}.{$value}";
+                } else {
+                    $return[] = $value;
+                }
+            } else {
+                $return[] = DB::raw("{$key} as {$value}");
             }
-            return DB::raw("{$key} as {$value}");
-        }, array_keys($this->listable), $this->listable);
+        }
+
+        return $return;
     }
 }
