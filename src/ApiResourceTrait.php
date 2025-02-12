@@ -1,6 +1,6 @@
 <?php
 
-namespace Systemson\ApiMaker;
+namespace ApiMaker;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
