@@ -1,6 +1,5 @@
-<?php
 
-namespace ApiMaker;
+namespace Systemson\ApiMaker;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -89,40 +88,10 @@ trait ApiResourceTrait
         if ($request->has('has')) {
             if ($has = json_decode($request->get('has'), true)) {
                 foreach ($has as $name => $values) {
-                    $relations = explode('.', $name);
-                    $column = array_pop($relations);
-
-                    // Construye la consulta anidada
-                    $query->whereHas(array_shift($relations), function ($query) use ($relations, $column, $values) {
-                        foreach ($relations as $relation) {
-                            $query->whereHas($relation, function ($query) use ($column, $values) {
-                                $query->whereIn("{$query->getModel()->getTable()}.{$column}", $values);
-                            });
-                        }
-                    });
-                }
-            }
-        }
-
-        //Filters by relations with like
-        if ($request->has('has_like')) {
-            if ($has_like = json_decode($request->get('has_like'), true)) {
-                foreach ($has_like as $name => $values) {
-                    $relations = explode('.', $name);
-                    $column = array_pop($relations);
-                    $mainRelation = array_shift($relations);
-
-                    $query->whereHas($mainRelation, function ($q) use ($relations, $column, $values) {
-                        foreach ($relations as $relation) {
-                            $q = $q->whereHas($relation);
-                        }
-
-                        $q->where(function ($q) use ($column, $values) {
-                            foreach ($values as $value) {
-                                $q->orWhere($column, 'ILIKE', "%{$value}%");
-                            }
+                    list($relation, $column) = explode('.', $name);
+                        $query->whereHas($relation, function ($query) use ($column, $values) {
+                            $query->whereIn("{$query->getModel()->getTable()}.{$column}", $values);
                         });
-                    });
                 }
             }
         }
