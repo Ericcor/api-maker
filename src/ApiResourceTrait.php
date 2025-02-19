@@ -102,10 +102,82 @@ trait ApiResourceTrait
         $perPage = (int) $request->input('per_page', $this->perPage ?? 20);
 
         if ($perPage == 0) {
-            return $query->get();
+            return $this->noPagination($request, $query);
+        } elseif ($request->has('paginate')) {
+            switch ($request->get('paginate')) {
+                case 'normal':
+                    return $this->normalPagination($request, $query, $perPage, $listable);
+                    break;
+
+                case 'simple':
+                    return $this->simplePagination($request, $query, $perPage);
+                    break;
+
+                case 'none':
+                    return $this->noPagination($request, $query);
+                    break;
+                
+                default:
+                    return $this->normalPagination($request, $query, $perPage, $listable);
+                    break;
+            }
         }
 
-        return $query->paginate($perPage);
+        return $this->normalPagination($request, $query, $perPage, $listable);
+    }
+
+    protected function simplePagination($request, $query, $perPage) {
+        $paginated = $query
+            ->simplePaginate($perPage)
+        ;
+
+        $items = collect($paginated->items())
+            ->each(function ($resource) use ($request) {
+                $resource->append($this->getAppendableAttributes($request));
+            })
+        ;
+
+        return $paginated;
+    }
+    
+    protected function noPagination($request, $query) {
+        $items = $query
+            ->get()
+        ;
+
+        $items->each(function ($resource) use ($request) {
+                $resource->append($this->getAppendableAttributes($request));
+            })
+        ;
+
+        return collect(['data' => $items]);
+    }
+
+    
+    protected function normalPagination($request, $query, $perPage, $listable) {
+        
+        $query_string = array_merge($listable, ['order_by', 'per_page', 'with']);
+
+        $paginated = $query
+            ->paginate($perPage)
+            ->appends($request->only($query_string))
+        ;
+
+        $items = collect($paginated->items())
+            ->each(function ($resource) use ($request) {
+                $resource->append($this->getAppendableAttributes($request));
+            })
+        ;
+
+        return $paginated;
+    }
+
+    private function getAppendableAttributes(Request $request)
+    {
+        if (!$request->has('append')) {
+            return [];
+        }
+        return explode(',', $request->get('append'));
     }
 
     private function getNameAndColumn($key, $alias, $table)
