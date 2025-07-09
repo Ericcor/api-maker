@@ -4,6 +4,7 @@ namespace ApiMaker;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 
 trait ApiResourceTrait
@@ -88,13 +89,17 @@ trait ApiResourceTrait
         if ($request->has('has')) {
             if ($has = json_decode($request->get('has'), true)) {
                 foreach ($has as $name => $values) {
-                    list($relation, $column) = explode('.', $name);
-                        $query->whereHas($relation, function ($query) use ($column, $values) {
-                            $query->whereIn("{$query->getModel()->getTable()}.{$column}", $values);
-                        });
+                    $segments = explode('.', $name);
+                    $column = array_pop($segments);
+                    $relations = $segments;
+
+                    $query->whereHas(implode('.', $relations), function ($query) use ($column, $values) {
+                        $query->whereIn("{$query->getModel()->getTable()}.{$column}", $values);
+                    });
                 }
             }
         }
+
 
         // Set order by
         if ($request->has('order_by')) {
